@@ -1,25 +1,24 @@
 <?php $this->extend("layouts/site") ?>
 <?php $this->section("content") ?>
-<h1>Welcome to the sign up page</h1>
+<h1>Welcome</h1>
+<p>Please, reset your password here.</p>
 
-<form action="<?php echo base_url(); ?>/user/registration" method="post" onsubmit="return handleSubmit();">
-    <label for="name" class="">Name</label>
-    <input type="text" name="name" value="<?= set_value('name') ?>" id="name" /><span id="name-error" class="error"></span><br />
 
-    <label for="name" class="">Email</label>
-    <input type="text" name="email" value="<?= set_value('email') ?>" id="email" /><span id="email-error" class="error"></span><br />
 
-    <label for="">Password:</label>
-    <input type="password" name="password" value="<?= set_value('password') ?>" id="password"><span id="password-error" class="error"></span> <br />
+<form action="<?php echo base_url(); ?>/user/resetpwd" method="post" onsubmit="return handleSubmit();">
+    <label for="name" class="">OTP (One time password):</label><input id="name" type="hidden" name="name" value="<?php echo $identifier ?>" />
+    <input type="password" name="otp" id="otp" /><span id="otp-error" class="error"></span><br />
 
-    <label for="name" class="">Mobile</label>
-    <input type="text" name="mobile" value="<?= set_value('mobile') ?>" id="mobile" /><span id="mobile-error" class="error"></span><br />
+    <label for="">New Password:</label>
+    <input type="password" name="password" id="password" /> <span id="password-error" class="error"></span><br />
+
+    <label for="">Re-enter New Password:</label>
+    <input type="password" name="password1" id="password1" /> <span id="password1-error" class="error"></span><br />
 
     <input type="submit" value="Submit">
 </form>
 
 <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
-
 <script type="text/javascript">
     var valueById = id => {
         return document.getElementById(id).value;
@@ -37,20 +36,20 @@
     var handleSubmit = () => {
         var data = {
             'name': valueById('name'),
-            'mobile': valueById('mobile'),
+            'otp': valueById('otp'),
             'password': valueById('password'),
-            'email': valueById('email')
+            'password1': valueById('password1')
         };
 
         axios({
             method: 'post',
-            url: '/user/registration',
+            url: '/user/resetpwd',
             data: data
         }).then(function(response) {
             var data = response.data;
             resetErrors();
             if (data.success) {
-                document.location.href = "/user/saved";
+                document.location.href = "/dashboard";
             } else {
                 renderErrors(data.errors);
             }

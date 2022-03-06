@@ -6,17 +6,17 @@ use App\Models\UserModel;
 
 class User extends BaseController
 {
+    /**
+     * Render the login form
+     */
     public function login()
     {
-        /* $csrf = array(
-            'name' => $this->security->get_csrf_token_name(),
-            'hash' => $this->security->get_csrf_hash()
-        ); */
-        //print_r($csrf);
-        //die();
         return view('login');
     }
 
+    /**
+     * This will handle sign in process
+     */
     public function signin()
     {
         $session = session();
@@ -37,17 +37,27 @@ class User extends BaseController
                     'isLoggedIn' => TRUE
                 ];
                 $session->set($ses_data);
-                return redirect()->to('/user/profile');
+                return json_encode(["success" => true]);
             } else {
-                $session->setFlashdata('msg', 'Password is incorrect.');
-                return redirect()->to('/login');
+                return json_encode([
+                    "success" => false,
+                    "errors" => [
+                        "password" => "Password is incorrect."
+                    ]
+
+                ]);
             }
         } else {
-            $session->setFlashdata('msg', 'Email does not exist.');
-            return redirect()->to('/login');
+            return json_encode([
+                "success" => false,
+                "errors" => [
+                    "name" => "Email/mobile does not exist."
+                ]
+            ]);
         }
         return view('login');
     }
+
 
     public function signup()
     {
@@ -74,10 +84,105 @@ class User extends BaseController
                 'password' => password_hash($this->request->getVar('password'), PASSWORD_DEFAULT)
             ];
             $userModel->save($data);
-            return redirect()->to('/dashboard');
+            return json_encode(['success' => true]);
         } else {
             $data['validation'] = $this->validator;
-            return view('signup', $data);
+            $response = [
+                "success" => false,
+                "errors" => $data['validation']->getErrors()
+            ];
+            return json_encode($response);
+        }
+    }
+
+    public function saved()
+    {
+        return "Changes saved successfully.";
+    }
+
+    public function forgotpwd()
+    {
+        return view("forgot-password");
+    }
+
+    public function sendotp()
+    {
+        helper(['form']);
+        $userModel = new UserModel();
+        $identifier = $this->request->getVar('name');
+
+        $data = $userModel->where('email', $identifier)->orWhere('mobile', $identifier)->first();
+        if ($data) {
+            $email = \Config\Services::email();
+
+            $email->setFrom('hery.imiary@mailinator.com', 'Your Name');
+            $email->setTo('hery.imiary@gmail.com');
+            $email->setCC('recipient@mailinator.com');
+
+            $email->setSubject('Email Test');
+            $email->setMessage('Testing the email class.');
+
+            $config['protocol'] = 'sendmail';
+            $config['mailPath'] = '/usr/sbin/sendmail';
+            //$config['charset']  = 'iso-8859-1';
+            //$config['wordWrap'] = true;
+
+            //$email->initialize($config);
+
+            if ($email->send()) {
+                echo "Success! - An email has been sent to ";
+            } else {
+                print_r($email->printDebugger());
+                return false;
+            }
+            exit;
+            return view("reset-password", ["identifier" => $identifier]);
+        }
+        return view("forgot-password", [
+            "errors" => ["name" => "User with (Mobile/Email) not found."],
+            "identifier" => $identifier
+        ]);
+    }
+
+    public function resetpwd()
+    {
+        helper(['form']);
+        $userModel = new UserModel();
+        $identifier = $this->request->getVar('name');
+        $password = $this->request->getVar('otp');
+
+        $data = $userModel->where('email', $identifier)->orWhere('mobile', $identifier)->first();
+
+        if ($data) {
+            $pass = $data['password'];
+            $authenticatePassword = password_verify($password, $pass);
+
+            if (!$authenticatePassword) {
+                $response = [
+                    "success" => false,
+                    "errors" => ["otp" => "Please enter the OPT sent via mail."]
+                ];
+                return json_encode($response);
+            }
+
+            $rules = [
+                'password'      => 'required|min_length[8]|max_length[50]|regex_match[/^(?=.{8,})(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=!]).*$/]',
+                'password1'     => 'matches[password]'
+            ];
+
+            if ($this->validate($rules)) {
+                $userModel = new UserModel();
+                $data['password'] = password_hash($this->request->getVar('password'), PASSWORD_DEFAULT);
+                $userModel->save($data);
+                return json_encode(['success' => true]);
+            } else {
+                $data['validation'] = $this->validator;
+                $response = [
+                    "success" => false,
+                    "errors" => $data['validation']->getErrors()
+                ];
+                return json_encode($response);
+            }
         }
     }
 }
