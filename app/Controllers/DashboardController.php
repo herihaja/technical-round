@@ -2,13 +2,15 @@
 
 namespace App\Controllers;
 
-use App\Models\UserModel;
+use App\Models\ArticleModel;
 
 class DashboardController extends BaseController
 {
     public function index()
     {
         $session = session();
-        echo "Hello : <b>" . $session->get('name') . "</b>";
+        $articleModel = new ArticleModel();
+        $data['articles'] = $articleModel->orderBy('id', 'DESC')->findAll();
+        return view('dashboard', $data);
     }
 }

@@ -130,20 +130,19 @@ class User extends BaseController
             /** Preparing and sending the mail content */
             $subject = "OTP from technical round app";
             $message = "Here is your OTP: " . $otp;
-            $email = "hery.imiary@gmail.com";
             $mail = new PHPMailer(true);
             try {
 
                 $mail->isSMTP();
                 $mail->Host         = 'smtp.gmail.com';
                 $mail->SMTPAuth     = true;
-                $mail->Username     = 'siminddl@gmail.com';
-                $mail->Password     = 'yorwxzkidcvmemmh';
+                $mail->Username     = getenv("MAIL_USERNAME");
+                $mail->Password     = getenv("MAIL_PASSWORD");
                 $mail->SMTPSecure   = 'tls';
                 $mail->Port         = 587;
                 $mail->Subject      = $subject;
                 $mail->Body         = $message;
-                $mail->setFrom('username@gmail.com', 'From application');
+                $mail->setFrom(getenv("MAIL_USERNAME"), 'From application');
 
                 $mail->SMTPOptions = array(
                     'ssl' => array(
