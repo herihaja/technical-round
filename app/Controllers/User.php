@@ -4,6 +4,10 @@ namespace App\Controllers;
 
 use App\Models\UserModel;
 
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\SMTP;
+use PHPMailer\PHPMailer\Exception;
+
 class User extends BaseController
 {
     /**
@@ -76,6 +80,7 @@ class User extends BaseController
         ];
 
         if ($this->validate($rules)) {
+            /** If all validations pass */
             $userModel = new UserModel();
             $data = [
                 'name'     => $this->request->getVar('name'),
@@ -112,30 +117,51 @@ class User extends BaseController
         $identifier = $this->request->getVar('name');
 
         $data = $userModel->where('email', $identifier)->orWhere('mobile', $identifier)->first();
+
+        /** Sending mail if identifier was correct */
         if ($data) {
-            $email = \Config\Services::email();
+            /** Generate the OTP */
+            $otp = mb_substr(md5($data["email"] . time()), 0, 6);
 
-            $email->setFrom('hery.imiary@mailinator.com', 'Your Name');
-            $email->setTo('hery.imiary@gmail.com');
-            $email->setCC('recipient@mailinator.com');
+            /** Update password for the current user */
+            $data['password'] = password_hash($otp, PASSWORD_DEFAULT);
+            $userModel->save($data);
 
-            $email->setSubject('Email Test');
-            $email->setMessage('Testing the email class.');
+            /** Preparing and sending the mail content */
+            $subject = "OTP from technical round app";
+            $message = "Here is your OTP: " . $otp;
+            $email = "hery.imiary@gmail.com";
+            $mail = new PHPMailer(true);
+            try {
 
-            $config['protocol'] = 'sendmail';
-            $config['mailPath'] = '/usr/sbin/sendmail';
-            //$config['charset']  = 'iso-8859-1';
-            //$config['wordWrap'] = true;
+                $mail->isSMTP();
+                $mail->Host         = 'smtp.gmail.com';
+                $mail->SMTPAuth     = true;
+                $mail->Username     = 'siminddl@gmail.com';
+                $mail->Password     = 'yorwxzkidcvmemmh';
+                $mail->SMTPSecure   = 'tls';
+                $mail->Port         = 587;
+                $mail->Subject      = $subject;
+                $mail->Body         = $message;
+                $mail->setFrom('username@gmail.com', 'From application');
 
-            //$email->initialize($config);
+                $mail->SMTPOptions = array(
+                    'ssl' => array(
+                        'verify_peer' => false,
+                        'verify_peer_name' => false,
+                        'allow_self_signed' => true
+                    )
+                );
 
-            if ($email->send()) {
-                echo "Success! - An email has been sent to ";
-            } else {
-                print_r($email->printDebugger());
-                return false;
+                $mail->addAddress($data["email"]);
+                $mail->isHTML(true);
+
+                if (!$mail->send()) {
+                    echo "Something went wrong. Please try again.";
+                }
+            } catch (Exception $e) {
+                echo "Something went wrong. Please try again.";
             }
-            exit;
             return view("reset-password", ["identifier" => $identifier]);
         }
         return view("forgot-password", [
@@ -155,6 +181,7 @@ class User extends BaseController
 
         if ($data) {
             $pass = $data['password'];
+            /** Check if otp match posted password */
             $authenticatePassword = password_verify($password, $pass);
 
             if (!$authenticatePassword) {
